@@ -1,59 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local Invoice App</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Gaya Khusus Struk Thermal (Lebar standar printer bluetooth umumnya 58mm/80mm) */
+        /* Gaya Struk Thermal */
         .struk-print {
-            width: 80mm;
+            width: 76mm;
             padding: 4mm;
             background: white;
             font-family: 'Courier New', Courier, monospace;
             color: black;
             font-size: 12px;
-            line-height: 1.2;
-        }
-        .struk-divider {
-            border-top: 1px dashed black;
-            margin: 6px 0;
+            line-height: 1.3;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 font-sans min-h-screen pb-10">
 
     <div class="max-w-xl mx-auto p-4">
-        <header class="bg-blue-600 text-white p-4 rounded-xl shadow-md mb-6">
-            <h1 class="text-2xl font-bold text-center">📄 Samosa Babeh</h1>
-            <p class="text-xs text-center text-blue-100 mt-1">Aplikasi ini dibuat oleh The Mai Kitchen</p>
+        <header class="bg-slate-900 text-white p-4 rounded-xl shadow-md mb-6 flex items-center justify-center gap-3">
+            <i class="fa-solid fa-wallet text-2xl text-amber-400"></i>
+
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">The Mai Kitchen</h1>
+                <p class="text-xs text-gray-400">Sistem Invoice Mandiri</p>
+            </div>
         </header>
 
         <main class="bg-white p-6 rounded-xl shadow-md mb-6">
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Buat Invoice Baru</h2>
-            
+
             <div class="grid grid-cols-2 gap-2 mb-4">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nama Brand Anda</label>
-                    <input type="text" id="merchantName" value="TOKO KITA" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:outline-blue-500 font-bold">
+                    <input type="text" id="merchantName" value="Samosa Babeh"
+                        class="w-full px-3 py-1.5 border rounded-lg text-sm focus:outline-blue-500 font-bold">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Slogan / Kontak</label>
-                    <input type="text" id="merchantSub" value="Telp: 0812-3456-789" class="w-full px-3 py-1.5 border rounded-lg text-sm focus:outline-blue-500">
+                    <input type="text" id="merchantSub" value="Telp: 0812-944-29249"
+                        class="w-full px-3 py-1.5 border rounded-lg text-sm focus:outline-blue-500">
                 </div>
             </div>
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-600 mb-1">Nama Klien</label>
-                <input type="text" id="clientName" placeholder="Nama pelanggan" class="w-full px-3 py-2 border rounded-lg focus:outline-blue-500">
+                <input type="text" id="clientName" placeholder="Nama pelanggan"
+                    class="w-full px-3 py-2 border rounded-lg focus:outline-blue-500">
             </div>
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-600 mb-1">Detail Item (Produk/Jasa)</label>
                 <div class="flex gap-2">
-                    <input type="text" id="itemName" placeholder="Nama barang" class="flex-1 px-3 py-2 border rounded-lg">
+                    <input type="text" id="itemName" placeholder="Nama barang"
+                        class="flex-1 px-3 py-2 border rounded-lg">
                     <input type="number" id="itemPrice" placeholder="Harga" class="w-28 px-3 py-2 border rounded-lg">
                     <button onclick="addItem()" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold">+</button>
                 </div>
@@ -66,8 +73,19 @@
                 <span id="totalDisplay">Rp 0</span>
             </div>
 
-            <button onclick="simpanInvoice()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">💾 Simpan Invoice</button>
+            <button onclick="simpanInvoice()"
+                class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">💾 Simpan
+                Invoice</button>
         </main>
+
+        <section id="resultArea"
+            class="bg-yellow-50 p-4 rounded-xl border-2 border-dashed border-yellow-300 mb-6 hidden">
+            <h3 class="text-sm font-bold text-yellow-800 mb-2 text-center">📸 HASIL STRUK (Siap Screenshot / Save)</h3>
+            <div id="imageContainer" class="flex justify-center bg-gray-200 p-3 rounded-lg overflow-x-auto">
+            </div>
+            <p class="text-[11px] text-center text-yellow-700 mt-2">Tips: Tekan lama pada gambar untuk menyimpan, atau
+                langsung screenshot layar HP Anda.</p>
+        </section>
 
         <section class="bg-white p-6 rounded-xl shadow-md">
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Riwayat Invoice</h2>
@@ -77,42 +95,45 @@
         </section>
     </div>
 
-    <div class="hidden">
+    <div style="opacity: 0; height: 0; width: 0; overflow: hidden; position: absolute;">
         <div id="strukTemplate" class="struk-print">
-            <div class="text-center">
-                <div class="font-bold text-lg tracking-wider" id="pdfMerchant">TOKO KITA</div>
-                <div class="text-[10px]" id="pdfMerchantSub">Maju Bersama Sukses</div>
-                <div class="struk-divider"></div>
+            <div style="text-align: center;">
+                <div style="font-weight: bold; font-size: 15px;" id="pdfMerchant">TOKO KITA</div>
+                <div style="font-size: 10px; margin-top: 2px;" id="pdfMerchantSub">Maju Bersama Sukses</div>
+                <div style="border-top: 1px dashed black; margin: 6px 0;"></div>
             </div>
-            
-            <div class="text-[11px] space-y-0.5">
-                <div>No   : <span id="pdfInvNumber">INV-XXXX</span></div>
-                <div>Tgl  : <span id="pdfDate">00/00/0000</span></div>
+
+            <div style="font-size: 11px;">
+                <div>No : <span id="pdfInvNumber">INV-XXXX</span></div>
+                <div>Tgl : <span id="pdfDate">00/00/0000</span></div>
                 <div>Klien: <span id="pdfClient">Pelanggan</span></div>
             </div>
-            
-            <div class="struk-divider"></div>
-            
-            <table class="w-full text-[11px]">
+
+            <div style="border-top: 1px dashed black; margin: 6px 0;"></div>
+
+            <table style="width: 100%; font-size: 11px;">
                 <thead>
-                    <th class="text-left font-normal">Item</th>
-                    <th class="text-right font-normal">Total</th>
+                    <tr>
+                        <th style="text-align: left; font-weight: normal;">Item</th>
+                        <th style="text-align: right; font-weight: normal;">Total</th>
+                    </tr>
                 </thead>
                 <tbody id="pdfItemsList">
-                    </tbody>
+                </tbody>
             </table>
-            
-            <div class="struk-divider"></div>
-            
-            <div class="flex justify-between font-bold text-sm">
-                <span>TOTAL BAYAR:</span>
+
+            <div style="border-top: 1px dashed black; margin: 6px 0;"></div>
+
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+                <span>TOTAL:</span>
                 <span id="pdfTotal">Rp 0</span>
             </div>
-            
-            <div class="struk-divider"></div>
-            <div class="text-center text-[10px] mt-4">
+
+            <div style="border-top: 1px dashed black; margin: 6px 0;"></div>
+            <div style="text-align: center; font-size: 10px; margin-top: 10px;">
                 *** TERIMA KASIH ***<br>
-                Invoice Sah & Disimpan Secara Lokal
+                Pembayaran via transfer ke rek BCA 6610746428 a.n Azizah R<br>
+                Follow IG Kami di @TheMaiKitchen dan @SamosaBabeh
             </div>
         </div>
     </div>
@@ -120,17 +141,15 @@
     <script>
         let currentItems = [];
         let totalAmount = 0;
-        let allInvoices = []; // Simpan data invoice global
+        let allInvoices = [];
 
         function addItem() {
             const nameInput = document.getElementById('itemName');
             const priceInput = document.getElementById('itemPrice');
-
             if (!nameInput.value || !priceInput.value) return alert('Isi nama item dan harga!');
 
             const price = parseFloat(priceInput.value);
             currentItems.push({ name: nameInput.value, price: price });
-            
             totalAmount += price;
             document.getElementById('totalDisplay').innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
 
@@ -169,127 +188,68 @@
             const response = await fetch('/api/invoices');
             allInvoices = await response.json();
             const container = document.getElementById('invoiceHistory');
-            
-            if(allInvoices.length === 0) return;
-            
+            if (allInvoices.length === 0) return;
+
             container.innerHTML = allInvoices.map((inv, index) => `
                 <div class="border border-gray-100 p-4 rounded-lg bg-gray-50 flex justify-between items-center">
                     <div>
                         <div class="font-bold text-sm text-gray-700">${inv.invoice_number}</div>
                         <div class="text-xs text-gray-500 mt-0.5">Klien: ${inv.client_name}</div>
-                        <div class="text-[10px] text-gray-400 mt-1">${new Date(inv.created_at).toLocaleString('id-ID')}</div>
                     </div>
                     <div class="text-right flex flex-col items-end gap-2">
                         <span class="font-bold text-blue-600 text-sm">Rp ${inv.total_amount.toLocaleString('id-ID')}</span>
-                        <button onclick="cetakStruk(${index})" class="bg-blue-500 text-white text-xs px-2.5 py-1 rounded hover:bg-blue-600 flex items-center gap-1 font-semibold">
-                            🖨️ Cetak PDF
+                        <button onclick="buatGambarStruk(${index})" class="bg-orange-500 text-white text-xs px-2.5 py-1 rounded hover:bg-orange-600 flex items-center gap-1 font-semibold cursor-pointer">
+                            📸 Buat Gambar
                         </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Fungsi Cetak Menggunakan Fitur Native Browser (Anti-Bentrokan CSS)
-        function cetakStruk(index) {
+        function buatGambarStruk(index) {
             const data = allInvoices[index];
             const merchantName = document.getElementById('merchantName').value;
             const merchantSub = document.getElementById('merchantSub').value;
 
-            // 1. Buka jendela cetak baru (Pop-up bersih khusus struk)
-            const printWindow = window.open('', '_blank', 'width=400,height=600');
-            
-            // 2. Tulis dokumen HTML mini di dalam jendela tersebut tanpa Tailwind agar aman
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>${data.invoice_number}</title>
-                    <style>
-                        body {
-                            margin: 0;
-                            padding: 10px;
-                            font-family: 'Courier New', Courier, monospace;
-                            color: black;
-                            font-size: 12px;
-                        }
-                        .struk {
-                            width: 72mm; /* Standar kertas printer bluetooth */
-                            margin: 0 auto;
-                        }
-                        .text-center { text-align: center; }
-                        .text-right { text-align: right; }
-                        .font-bold { font-weight: bold; }
-                        .divider { border-top: 1px dashed black; margin: 6px 0; }
-                        table { width: 100%; font-size: 11px; border-collapse: collapse; }
-                        td, th { padding: 2px 0; vertical-align: top; }
-                        .flex-space { display: flex; justify-content: space-between; }
-                        @media print {
-                            body { padding: 0; }
-                            @page { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="struk">
-                        <div class="text-center">
-                            <div class="font-bold" style="font-size: 16px;">${merchantName.toUpperCase()}</div>
-                            <div style="font-size: 10px; margin-top: 2px;">${merchantSub}</div>
-                            <div class="divider"></div>
-                        </div>
-                        
-                        <div style="font-size: 11px; line-height: 1.4;">
-                            <div>No   : ${data.invoice_number}</div>
-                            <div>Tgl  : ${new Date(data.created_at).toLocaleDateString('id-ID')}</div>
-                            <div>Klien: ${data.client_name}</div>
-                        </div>
-                        
-                        <div class="divider"></div>
-                        
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="text-align: left; font-weight: normal;">Item</th>
-                                    <th class="text-right" style="font-weight: normal;">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.items.map(item => `
-                                    <tr>
-                                        <td>${item.name}</td>
-                                        <td class="text-right">Rp ${item.price.toLocaleString('id-ID')}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        
-                        <div class="divider"></div>
-                        
-                        <div class="flex-space font-bold" style="font-size: 13px;">
-                            <span>TOTAL:</span>
-                            <span>Rp ${data.total_amount.toLocaleString('id-ID')}</span>
-                        </div>
-                        
-                        <div class="divider"></div>
-                        <div class="text-center" style="font-size: 10px; margin-top: 12px;">
-                            *** TERIMA KASIH ***<br>
-                            Invoice Sukses Dicetak
-                        </div>
-                    </div>
-                    <script>
-                        // Otomatis trigger dialog cetak begitu halaman selesai dimuat
-                        window.onload = function() {
-                            window.print();
-                            // Menutup jendela pop-up otomatis setelah user selesai cetak/batal
-                            setTimeout(function() { window.close(); }, 500);
-                        };
-                    <\/script>
-                </body>
-                </html>
-            `);
+            document.getElementById('pdfMerchant').innerText = merchantName.toUpperCase();
+            document.getElementById('pdfMerchantSub').innerText = merchantSub;
+            document.getElementById('pdfInvNumber').innerText = data.invoice_number;
+            document.getElementById('pdfDate').innerText = new Date(data.created_at).toLocaleDateString('id-ID');
+            document.getElementById('pdfClient').innerText = data.client_name;
+            document.getElementById('pdfTotal').innerText = `Rp ${data.total_amount.toLocaleString('id-ID')}`;
 
-            printWindow.document.close();
+            const tbody = document.getElementById('pdfItemsList');
+            tbody.innerHTML = data.items.map(item => `
+                <tr>
+                    <td style="padding: 2px 0;">${item.name}</td>
+                    <td style="text-align: right; padding: 2px 0;">Rp ${item.price.toLocaleString('id-ID')}</td>
+                </tr>
+            `).join('');
+
+            const target = document.getElementById('strukTemplate');
+
+            html2canvas(target, {
+                logging: false,
+                useCORS: true,
+                scale: 2
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+
+                const resultArea = document.getElementById('resultArea');
+                const imageContainer = document.getElementById('imageContainer');
+
+                resultArea.classList.remove('hidden');
+                imageContainer.innerHTML = `<img src="${imgData}" class="shadow-md border border-gray-300 bg-white" style="max-width:100%; height:auto;" />`;
+
+                resultArea.scrollIntoView({ behavior: 'smooth' });
+            }).catch(err => {
+                console.error("Gagal membuat gambar: ", err);
+                alert("Ada kendala teknis saat memotret struk.");
+            });
         }
 
         loadInvoices();
     </script>
 </body>
+
 </html>
