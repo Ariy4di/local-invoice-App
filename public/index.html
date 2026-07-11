@@ -31,7 +31,7 @@
         </header>
 
         <main class="bg-white p-6 rounded-xl shadow-md mb-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Buat Invoice Baru</h2>
+            <h2 id="formTitle" class="text-lg font-semibold text-gray-700 mb-4">Buat Invoice Baru</h2>
             
             <div class="grid grid-cols-2 gap-2 mb-4">
                 <div>
@@ -49,7 +49,6 @@
                 <input type="text" id="clientName" placeholder="Nama pelanggan" class="w-full px-3 py-2 border rounded-lg focus:outline-blue-500 text-sm">
             </div>
 
-            <!-- Bagian Detail Item yang Di-adjust agar Ramah Layar HP -->
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-600 mb-1">Detail Item (Produk/Jasa)</label>
                 <div class="space-y-2">
@@ -57,7 +56,7 @@
                     <div class="flex gap-2">
                         <input type="number" id="itemPrice" placeholder="Harga Satuan" class="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-blue-500">
                         <input type="number" id="itemQty" value="1" min="1" placeholder="Qty" class="w-20 px-3 py-2 border rounded-lg text-sm text-center focus:outline-blue-500">
-                        <button onclick="addItem()" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm">+</button>
+                        <button id="btnAddItem" onclick="addItem()" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm">+</button>
                     </div>
                 </div>
             </div>
@@ -69,7 +68,8 @@
                 <span id="totalDisplay">Rp 0</span>
             </div>
 
-            <button onclick="simpanInvoice()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">💾 Simpan Invoice</button>
+            <button id="btnSimpan" onclick="simpanInvoice()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">💾 Simpan Invoice</button>
+            <button id="btnBatalEdit" onclick="cancelEdit()" class="w-full bg-gray-400 hover:bg-gray-500 text-white py-2 rounded-lg font-bold transition mt-2 hidden">❌ Batal Edit</button>
         </main>
 
         <section id="resultArea" class="bg-yellow-50 p-4 rounded-xl border-2 border-dashed border-yellow-300 mb-6 hidden">
@@ -86,7 +86,6 @@
         </section>
     </div>
 
-    <!-- Template Gambar Struk Tersembunyi -->
     <div style="opacity: 0; height: 0; width: 0; overflow: hidden; position: absolute;">
         <div id="strukTemplate" class="struk-print">
             <div style="text-align: center;">
@@ -132,26 +131,41 @@
         let currentItems = [];
         let totalAmount = 0;
         let allInvoices = [];
+        let editingInvoiceId = null; // ID invoice database yang diedit
+        let editingItemIndex = null; // Index item tabel sementara yang dicicil
 
-        // 1. Fungsi menambah item ke array (Mendukung Qty)
+        // 1. Fungsi menambah / memperbarui item di list sementara
         function addItem() {
             const nameInput = document.getElementById('itemName');
             const priceInput = document.getElementById('itemPrice');
             const qtyInput = document.getElementById('itemQty');
+            const btnAdd = document.getElementById('btnAddItem');
             
             if (!nameInput.value || !priceInput.value) return alert('Isi nama item dan harga!');
 
             const price = parseFloat(priceInput.value);
             const qty = parseInt(qtyInput.value) || 1;
 
-            // Simpan rincian data nama, harga satuan, dan qty ke dalam array
-            currentItems.push({ 
-                name: nameInput.value, 
-                price: price, 
-                qty: qty 
-            });
+            if (editingItemIndex !== null) {
+                // Jika sedang mengedit baris item tertentu, perbarui index tersebut
+                currentItems[editingItemIndex] = {
+                    name: nameInput.value,
+                    price: price,
+                    qty: qty
+                };
+                editingItemIndex = null;
+                // Kembalikan tombol ke tanda "+" semula
+                btnAdd.innerText = '+';
+                btnAdd.className = "bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm";
+            } else {
+                // Jika normal, masukkan data sebagai item baru
+                currentItems.push({ 
+                    name: nameInput.value, 
+                    price: price, 
+                    qty: qty 
+                });
+            }
 
-            // Reset field input
             nameInput.value = '';
             priceInput.value = '';
             qtyInput.value = '1';
@@ -159,7 +173,7 @@
             renderCurrentItems();
         }
 
-        // 2. Menggambar ulang daftar item sementara (Kalkulasi otomatis Qty x Harga)
+        // 2. Menggambar ulang daftar item sementara dengan tambahan tombol Edit kecil
         function renderCurrentItems() {
             const list = document.getElementById('itemList');
             
@@ -186,9 +200,14 @@
                                 ${item.qty} x Rp ${item.price.toLocaleString('id-ID')} = <span class="text-gray-600 font-semibold">Rp ${subTotal.toLocaleString('id-ID')}</span>
                             </span>
                         </div>
-                        <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700 font-bold px-2 py-0.5 rounded hover:bg-red-50 cursor-pointer transition text-xs">
-                            ✕ Hapus
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="editTemporaryItem(${index})" class="text-amber-500 hover:text-amber-700 font-semibold text-xs cursor-pointer">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700 font-bold text-xs cursor-pointer">
+                                ✕ Hapus
+                            </button>
+                        </div>
                     </li>
                 `;
             });
@@ -196,17 +215,47 @@
             document.getElementById('totalDisplay').innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
         }
 
+        // Fungsi memicu edit pada item yang sedang dicicil
+        function editTemporaryItem(index) {
+            editingItemIndex = index;
+            const item = currentItems[index];
+
+            // Lempar balik data ke kolom input atas
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemQty').value = item.qty;
+
+            // Ubah tombol "+" menjadi tombol centang / konfirmasi orange
+            const btnAdd = document.getElementById('btnAddItem');
+            btnAdd.innerText = '✓';
+            btnAdd.className = "bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm";
+            
+            document.getElementById('itemName').focus();
+        }
+
         function removeItem(index) {
             currentItems.splice(index, 1);
+            // Reset status jika item yang sedang di-edit malah dihapus
+            if (editingItemIndex === index) {
+                editingItemIndex = null;
+                document.getElementById('btnAddItem').innerText = '+';
+                document.getElementById('btnAddItem').className = "bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm";
+            } else if (editingItemIndex > index) {
+                editingItemIndex--;
+            }
             renderCurrentItems(); 
         }
 
+        // 3. Fungsi Simpan & Update Invoice ke Server
         async function simpanInvoice() {
             const clientName = document.getElementById('clientName').value;
             if (!clientName || currentItems.length === 0) return alert('Nama klien atau item masih kosong!');
 
-            const response = await fetch('/api/invoices', {
-                method: 'POST',
+            const url = editingInvoiceId ? `/api/invoices/${editingInvoiceId}` : '/api/invoices';
+            const method = editingInvoiceId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ client_name: clientName, items: currentItems, total_amount: totalAmount })
             });
@@ -214,18 +263,63 @@
             const result = await response.json();
             if (result.success) {
                 alert(result.message);
-                document.getElementById('clientName').value = '';
-                currentItems = []; 
-                renderCurrentItems(); 
+                resetForm();
                 loadInvoices();
             }
         }
 
+        // 4. Mempersiapkan Form untuk Mode Edit Riwayat Lama
+        function prepareEditInvoice(index) {
+            const inv = allInvoices[index];
+            editingInvoiceId = inv.id;
+
+            document.getElementById('clientName').value = inv.client_name;
+            currentItems = typeof inv.items === 'string' ? JSON.parse(inv.items) : [...inv.items];
+            renderCurrentItems();
+
+            document.getElementById('formTitle').innerText = `✏️ Edit Invoice (${inv.invoice_number})`;
+            document.getElementById('btnSimpan').innerText = '🔄 Update Invoice';
+            document.getElementById('btnSimpan').className = 'w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-bold transition';
+            document.getElementById('btnBatalEdit').classList.remove('hidden');
+
+            document.getElementById('formTitle').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            resetForm();
+        }
+
+        function resetForm() {
+            editingInvoiceId = null;
+            editingItemIndex = null;
+            document.getElementById('clientName').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemQty').value = '1';
+            
+            const btnAdd = document.getElementById('btnAddItem');
+            btnAdd.innerText = '+';
+            btnAdd.className = "bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold transition text-sm";
+
+            currentItems = [];
+            renderCurrentItems();
+
+            document.getElementById('formTitle').innerText = 'Buat Invoice Baru';
+            document.getElementById('btnSimpan').innerText = '💾 Simpan Invoice';
+            document.getElementById('btnSimpan').className = 'w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition';
+            document.getElementById('btnBatalEdit').classList.add('hidden');
+        }
+
+        // 5. Load Riwayat Invoice
         async function loadInvoices() {
             const response = await fetch('/api/invoices');
             allInvoices = await response.json();
             const container = document.getElementById('invoiceHistory');
-            if(allInvoices.length === 0) return;
+            
+            if(allInvoices.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm text-center">Belum ada invoice tersimpan.</p>';
+                return;
+            }
             
             container.innerHTML = allInvoices.map((inv, index) => `
                 <div class="border border-gray-100 p-4 rounded-lg bg-gray-50 flex justify-between items-center">
@@ -233,17 +327,22 @@
                         <div class="font-bold text-sm text-gray-700">${inv.invoice_number}</div>
                         <div class="text-xs text-gray-500 mt-0.5">Klien: ${inv.client_name}</div>
                     </div>
-                    <div class="text-right flex flex-col items-end gap-2">
-                        <span class="font-bold text-blue-600 text-sm">Rp ${inv.total_amount.toLocaleString('id-ID')}</span>
-                        <button onclick="buatGambarStruk(${index})" class="bg-orange-500 text-white text-xs px-2.5 py-1 rounded hover:bg-orange-600 flex items-center gap-1 font-semibold cursor-pointer">
-                            📸 Buat Gambar
-                        </button>
+                    <div class="text-right flex flex-col items-end gap-1.5">
+                        <span class="font-bold text-blue-600 text-sm mb-1">Rp ${inv.total_amount.toLocaleString('id-ID')}</span>
+                        <div class="flex gap-1.5">
+                            <button onclick="prepareEditInvoice(${index})" class="bg-amber-500 text-white text-[11px] px-2.5 py-1 rounded hover:bg-amber-600 flex items-center gap-1 font-semibold cursor-pointer transition">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="buatGambarStruk(${index})" class="bg-orange-500 text-white text-[11px] px-2.5 py-1 rounded hover:bg-orange-600 flex items-center gap-1 font-semibold cursor-pointer transition">
+                                📸 Struk
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // 3. Merender data kuantitas ke gambar struk thermal
+        // 6. Cetak Gambar Struk Thermal
         function buatGambarStruk(index) {
             const data = allInvoices[index];
             const merchantName = document.getElementById('merchantName').value;
@@ -257,8 +356,9 @@
             document.getElementById('pdfTotal').innerText = `Rp ${data.total_amount.toLocaleString('id-ID')}`;
 
             const tbody = document.getElementById('pdfItemsList');
-            tbody.innerHTML = data.items.map(item => {
-                // Beri fallback angka 1 jika ada data lama yang belum punya field qty
+            const itemsArray = typeof data.items === 'string' ? JSON.parse(data.items) : data.items;
+
+            tbody.innerHTML = itemsArray.map(item => {
                 const qty = item.qty || 1; 
                 const subTotal = item.price * qty;
                 
